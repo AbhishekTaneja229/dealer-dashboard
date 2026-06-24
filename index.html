@@ -730,58 +730,63 @@ function renderOverviewAndTrend(){
       }]
     });
   },50);
-  // Combined trend chart
+  // ── Combined trend chart ────────────────────────────────────────
   if(CHARTS['trend-all']){CHARTS['trend-all'].destroy();delete CHARTS['trend-all']}
-  const allMonths=MONTH_ORDER.filter(m=>[...new Set(allFYRows.map(r=>r['Months']||''))].includes(m));
-  // Show all 3 lines in ALL mode, only the selected biz line otherwise
-  const activeBizList=CURRENT_BIZ==='ALL'?BIZ_LIST:[CURRENT_BIZ];
-  const datasets=activeBizList.map(b=>{
-    const cfg=BIZ_CFG[b];
-    const rows=getFilteredRows(b);
-    return{label:b,data:allMonths.map(m=>parseFloat(rows.filter(r=>r['Months']===m).reduce((s,r)=>s+(parseFloat(r['BV'])||0),0).toFixed(4))),borderColor:cfg.line,backgroundColor:cfg.line+'18',fill:false,tension:0.42,pointRadius:5,pointBackgroundColor:cfg.line,pointBorderColor:'#fff',pointBorderWidth:2.5,borderWidth:3};
-  });
   setTimeout(()=>{
     const canvas=document.getElementById('trend-all');
     if(!canvas)return;
+    // Months in this FY that match active month filter
+    const fyRows2=RAW.filter(r=>r['FY']===ACTIVE_FY);
+    const mSet=new Set(fyRows2.map(r=>r['Months']||'').filter(Boolean));
+    const chartMonths=MONTH_ORDER.filter(m=>mSet.has(m)&&(FS.month.act.length>=FS.month.all.length||FS.month.act.includes(m)));
+    // Datasets: ALL shows 3 lines, specific biz shows 1 line
+    const activeBizList=CURRENT_BIZ==='ALL'?BIZ_LIST:[CURRENT_BIZ];
+    const datasets=activeBizList.map(b=>{
+      const cfg=BIZ_CFG[b];
+      const rows=getFilteredRows(b);
+      const data=chartMonths.map(m=>parseFloat(rows.filter(r=>r['Months']===m).reduce((s,r)=>s+(parseFloat(r['BV'])||0),0).toFixed(2)));
+      return{label:b,data,borderColor:cfg.line,backgroundColor:cfg.line+'15',fill:true,tension:0.42,pointRadius:5,pointBackgroundColor:cfg.line,pointBorderColor:'#fff',pointBorderWidth:2.5,borderWidth:3};
+    });
+    const isAll=CURRENT_BIZ==='ALL';
     CHARTS['trend-all']=new Chart(canvas,{
       type:'line',
-      data:{labels:allMonths.map(m=>m.slice(0,3)),datasets},
-      options:{responsive:true,maintainAspectRatio:false,
+      data:{labels:chartMonths.map(m=>m.slice(0,3)),datasets},
+      options:{
+        responsive:true,maintainAspectRatio:false,
         plugins:{
-          legend:{display:true,position:'top',labels:{font:{size:11},padding:12}},
+          legend:{display:isAll,position:'top',labels:{font:{size:11},padding:10,usePointStyle:true,pointStyleWidth:8}},
           tooltip:{callbacks:{label:v=>v.dataset.label+': ₹'+fmt(v.raw)+' L'}}
         },
         scales:{
           x:{ticks:{font:{size:11},autoSkip:false},grid:{display:false},border:{display:false}},
           y:{display:false,grid:{display:false},border:{display:false}}
         },
-        layout:{padding:{top:36,bottom:4,left:4,right:4}}
+        layout:{padding:{top:isAll?8:36,bottom:4,left:6,right:6}}
       },
       plugins:[{
-        id:'trendLabels',
+        id:'trendDL',
         afterDatasetsDraw(chart){
-          // Only show data labels when 1 line visible (not ALL mode with 3 lines)
-          if(chart.data.datasets.length>1)return;
           const ctx=chart.ctx;
           chart.data.datasets.forEach((ds,di)=>{
             const meta=chart.getDatasetMeta(di);
             if(meta.hidden)return;
+            const vOff=isAll?[0,14,28][di]||0:0; // stagger 3 lines vertically in ALL mode
             ctx.save();
             meta.data.forEach((pt,i)=>{
               const val=ds.data[i];
-              if(val===null||val===undefined||val===0)return;
-              ctx.font='700 10px -apple-system,sans-serif';
+              if(!val||val===0)return;
+              ctx.font=isAll?'600 9px -apple-system,sans-serif':'700 10px -apple-system,sans-serif';
               ctx.fillStyle=ds.borderColor;
               ctx.textAlign='center';
               ctx.textBaseline='bottom';
-              ctx.fillText('₹'+fmt(val),pt.x,pt.y-8);
+              ctx.fillText('₹'+(isAll?val.toFixed(1):fmt(val)),pt.x,pt.y-6-vOff);
             });
             ctx.restore();
           });
         }
       }]
     });
-  },50);
+  },80);
 }
 
 function renderVTabs(){
