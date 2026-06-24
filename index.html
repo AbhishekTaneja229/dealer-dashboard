@@ -947,49 +947,124 @@ function renderContent(){
 }
 
 function renderStateTableRows(d){
-  // Get state-level data including mtd
-  const biz=CURRENT_BIZ; // may be 'ALL'
+  if(CURRENT_BIZ==='ALL'){
+    return buildAllGroupedDrill();
+  }
+  return buildSingleBizRows(CURRENT_BIZ);
+}
+
+/* ── helpers ─────────────────────────────── */
+function getStateDrillRows(biz){
   const rows=getFilteredRows(biz);
   const mtdM=getMTD(rows);
   const mtdRows=rows.filter(r=>r['Months']===mtdM);
-  const bvSum=a=>a.reduce((s,r)=>s+(parseFloat(r['BV'])||0),0);
-  const uniq=a=>[...new Set(a.map(r=>r['Customer Code']).filter(Boolean))].length;
-
   const stateMap={};
   rows.forEach(r=>{
     const st=r['Customer State']||'Other';
-    if(!stateMap[st])stateMap[st]={ytdBV:0,mtdBV:0,ytdD:new Set(),mtdD:new Set(),allD:new Set()};
+    if(!stateMap[st])stateMap[st]={ytdBV:0,mtdBV:0,ytdD:new Set(),mtdD:new Set()};
     stateMap[st].ytdBV+=parseFloat(r['BV'])||0;
-    if(r['Customer Code']){stateMap[st].ytdD.add(r['Customer Code']);stateMap[st].allD.add(r['Customer Code'])}
+    if(r['Customer Code'])stateMap[st].ytdD.add(r['Customer Code']);
   });
   mtdRows.forEach(r=>{
     const st=r['Customer State']||'Other';
-    if(!stateMap[st])stateMap[st]={ytdBV:0,mtdBV:0,ytdD:new Set(),mtdD:new Set(),allD:new Set()};
+    if(!stateMap[st])stateMap[st]={ytdBV:0,mtdBV:0,ytdD:new Set(),mtdD:new Set()};
     stateMap[st].mtdBV+=parseFloat(r['BV'])||0;
     if(r['Customer Code'])stateMap[st].mtdD.add(r['Customer Code']);
   });
-
-  // All-time DD per state for this biz (ALL = across all businesses)
-  const allBase=biz==='ALL'?RAW:RAW.filter(r=>r['Business']===biz);
+  const allBase=RAW.filter(r=>r['Business']===biz);
   const allStateDD={};
   allBase.forEach(r=>{const st=r['Customer State']||'Other';if(!allStateDD[st])allStateDD[st]=new Set();if(r['Customer Code'])allStateDD[st].add(r['Customer Code'])});
-
   return Object.entries(stateMap).sort((a,b)=>b[1].ytdBV-a[1].ytdBV).map(([st,v])=>{
     const totalDD=(allStateDD[st]||new Set()).size;
-    const ytdA=v.ytdD.size, mtdA=v.mtdD.size;
+    const ytdA=v.ytdD.size,mtdA=v.mtdD.size;
     const pct=totalDD>0?Math.round(ytdA/totalDD*100):0;
-    return`<tr>
-      <td class="td-state">${st}</td>
-      <td class="td-num">${fmtInt(totalDD)}</td>
-      <td class="td-num">${fmtInt(ytdA)}</td>
-      <td class="td-num">${fmtInt(mtdA)}</td>
-      <td class="td-num">₹${fmt(v.ytdBV)}</td>
-      <td class="td-num">₹${fmt(v.ytdBV)}</td>
-      <td class="td-num">₹${fmt(v.mtdBV)}</td>
-      <td class="td-num">${pct}%</td>
-    </tr>`;
-  }).join('');
+    return{st,totalDD,ytdA,mtdA,ytdBV:v.ytdBV,mtdBV:v.mtdBV,pct};
+  });
 }
+
+function stateDataRow(r,acc){
+  const td='padding:7px 10px;font-size:12px;border-bottom:1px solid #F9FAFB;';
+  return '<tr onmouseover="this.style.background='#F9FAFB'" onmouseout="this.style.background=''">'
+    +'<td style="'+td+'font-weight:600;color:#111827">'+r.st+'</td>'
+    +'<td style="'+td+'text-align:right">'+fmtInt(r.totalDD)+'</td>'
+    +'<td style="'+td+'text-align:right;color:'+acc+';font-weight:700">'+fmtInt(r.ytdA)+'</td>'
+    +'<td style="'+td+'text-align:right">'+fmtInt(r.mtdA)+'</td>'
+    +'<td style="'+td+'text-align:right">₹'+fmt(r.ytdBV)+'</td>'
+    +'<td style="'+td+'text-align:right">₹'+fmt(r.mtdBV)+'</td>'
+    +'<td style="'+td+'text-align:right;font-weight:700;color:'+(r.pct>=50?'#059669':'#374151')+'">'+r.pct+'%</td>'
+    +'</tr>';
+}
+
+function subtotalRow(data,acc,label){
+  const tot=data.reduce((s,r)=>({totalDD:s.totalDD+r.totalDD,ytdA:s.ytdA+r.ytdA,mtdA:s.mtdA+r.mtdA,ytdBV:s.ytdBV+r.ytdBV,mtdBV:s.mtdBV+r.mtdBV}),{totalDD:0,ytdA:0,mtdA:0,ytdBV:0,mtdBV:0});
+  const pct=tot.totalDD>0?Math.round(tot.ytdA/tot.totalDD*100):0;
+  const td='padding:8px 10px;font-size:12px;font-weight:800;';
+  return '<tr style="background:#ECFDF5;border-top:2px solid #6EE7B7;border-bottom:2px solid #6EE7B7">'
+    +'<td style="'+td+'color:#065F46">📊 '+label+'</td>'
+    +'<td style="'+td+'text-align:right;color:#065F46">'+fmtInt(tot.totalDD)+'</td>'
+    +'<td style="'+td+'text-align:right;color:'+acc+'">'+fmtInt(tot.ytdA)+'</td>'
+    +'<td style="'+td+'text-align:right;color:#065F46">'+fmtInt(tot.mtdA)+'</td>'
+    +'<td style="'+td+'text-align:right;color:#065F46">₹'+fmt(tot.ytdBV)+'</td>'
+    +'<td style="'+td+'text-align:right;color:#065F46">₹'+fmt(tot.mtdBV)+'</td>'
+    +'<td style="'+td+'text-align:right;color:#065F46">'+pct+'%</td>'
+    +'</tr>';
+}
+
+const TH_CELLS='<th style="padding:7px 10px;font-size:10px;color:#6B7280;font-weight:700;border-bottom:1px solid #E5E7EB;text-transform:uppercase;letter-spacing:.4px;text-align:left;white-space:nowrap">State</th>'
+  +'<th style="padding:7px 10px;font-size:10px;color:#6B7280;font-weight:700;border-bottom:1px solid #E5E7EB;text-transform:uppercase;letter-spacing:.4px;text-align:right">Total DD</th>'
+  +'<th style="padding:7px 10px;font-size:10px;color:#6B7280;font-weight:700;border-bottom:1px solid #E5E7EB;text-transform:uppercase;letter-spacing:.4px;text-align:right">YTD Active</th>'
+  +'<th style="padding:7px 10px;font-size:10px;color:#6B7280;font-weight:700;border-bottom:1px solid #E5E7EB;text-transform:uppercase;letter-spacing:.4px;text-align:right">MTD Active</th>'
+  +'<th style="padding:7px 10px;font-size:10px;color:#6B7280;font-weight:700;border-bottom:1px solid #E5E7EB;text-transform:uppercase;letter-spacing:.4px;text-align:right">YTD Billed</th>'
+  +'<th style="padding:7px 10px;font-size:10px;color:#6B7280;font-weight:700;border-bottom:1px solid #E5E7EB;text-transform:uppercase;letter-spacing:.4px;text-align:right">MTD Billed</th>'
+  +'<th style="padding:7px 10px;font-size:10px;color:#6B7280;font-weight:700;border-bottom:1px solid #E5E7EB;text-transform:uppercase;letter-spacing:.4px;text-align:right">Active %</th>';
+
+function buildSingleBizRows(biz){
+  const cfg=BIZ_CFG[biz]||{acc:'#374151'};
+  const data=getStateDrillRows(biz);
+  const sub=subtotalRow(data,cfg.acc,biz+' Total');
+  return '<tr style="background:#F9FAFB">'+TH_CELLS+'</tr>'+sub
+    +data.map(r=>stateDataRow(r,cfg.acc)).join('');
+}
+
+function buildAllGroupedDrill(){
+  return BIZ_LIST.map(biz=>{
+    const cfg=BIZ_CFG[biz];
+    const data=getStateDrillRows(biz);
+    const grpId='sg-'+biz;
+    // Group header row with expand/collapse
+    const headerBg=cfg.acc+'15';
+    const header='<tr id="'+grpId+'-hdr" style="background:'+headerBg+';cursor:pointer" onclick="toggleStateGroup(''+grpId+'')">'
+      +'<td colspan="7" style="padding:10px 12px;font-size:13px;font-weight:700;color:'+cfg.acc+'">'
+      +'<span style="display:inline-flex;align-items:center;gap:8px">'
+      +'<span style="width:10px;height:10px;border-radius:50%;background:'+cfg.acc+';display:inline-block"></span>'
+      +biz+' — State Breakdown'
+      +'<span id="'+grpId+'-ic" style="font-size:11px;margin-left:4px;font-weight:500;color:'+cfg.acc+'">▼ collapse</span>'
+      +'</span></td></tr>';
+    // Column headers
+    const colHeaders='<tr id="'+grpId+'-cols" style="background:#F9FAFB">'+TH_CELLS+'</tr>';
+    // Subtotal
+    const sub='<tr id="'+grpId+'-sub">'+subtotalRow(data,cfg.acc,biz+' Subtotal').slice(4);// remove leading <tr> 
+    // State rows
+    const rows=data.map((r,i)=>{
+      const row=stateDataRow(r,cfg.acc);
+      return row.replace('<tr ','<tr id="'+grpId+'-r'+i+'" ');
+    }).join('');
+    return header+colHeaders+subtotalRow(data,cfg.acc,biz+' Subtotal').replace('<tr ','<tr id="'+grpId+'-sub" ')+data.map((r,i)=>stateDataRow(r,cfg.acc).replace('<tr ','<tr id="'+grpId+'-r'+i+'" ')).join('');
+  }).join('<tr><td colspan="7" style="padding:4px"></td></tr>');
+}
+
+function toggleStateGroup(grpId){
+  const ic=document.getElementById(grpId+'-ic');
+  const isOpen=ic&&ic.textContent.includes('collapse');
+  // Toggle all rows in this group (cols, sub, r0-rN)
+  const allRows=document.querySelectorAll('[id^="'+grpId+'-"]');
+  allRows.forEach(el=>{
+    if(el.id===grpId+'-hdr')return; // keep header
+    el.style.display=isOpen?'none':'';
+  });
+  if(ic)ic.textContent=isOpen?'▶ expand':'▼ collapse';
+}
+
 
 function renderFilterChips(){
   const el=document.getElementById('filter-chips-row');
