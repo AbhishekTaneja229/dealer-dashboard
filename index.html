@@ -86,15 +86,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 /* ── TOP SECTION: Overview card + Trend ── */
 .top-section{display:grid;grid-template-columns:260px 1fr;gap:14px;margin-bottom:1rem;align-items:stretch}
-.overview-card{border-radius:20px;padding:1.4rem 1.6rem;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 8px 24px rgba(0,0,0,.13);position:relative;overflow:hidden;background:linear-gradient(135deg,#5B21B6,#7C3AED)}
-.overview-card::before{content:'';position:absolute;top:-30px;right:-30px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.08)}
-.overview-card::after{content:'';position:absolute;bottom:-20px;left:10px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.06)}
-.ov-label{font-size:9px;font-weight:700;letter-spacing:1.2px;color:rgba(255,255,255,.5);margin-bottom:.9rem;text-transform:uppercase;position:relative;z-index:1}
-.ov-rows{display:flex;flex-direction:column;gap:0;flex:1;position:relative;z-index:1}
-.ov-row{display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid rgba(255,255,255,.12)}
-.ov-row:last-child{border-bottom:none}
-.ov-lbl{font-size:11px;color:rgba(255,255,255,.65);font-weight:500}
-.ov-val{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.3px}
+.donut-card{background:#fff;border-radius:20px;padding:1.2rem 1rem;border:1px solid rgba(0,0,0,.06);box-shadow:0 4px 16px rgba(0,0,0,.07);display:flex;flex-direction:column;align-items:center}
+.donut-title{font-size:10px;color:#9CA3AF;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:.6rem;align-self:flex-start}
+.donut-wrap{position:relative;width:100%;flex:1;min-height:140px}
+.donut-legend{display:flex;flex-direction:column;gap:5px;width:100%;margin-top:.7rem}
+.donut-leg-item{display:flex;align-items:center;justify-content:space-between;font-size:11px}
+.donut-leg-left{display:flex;align-items:center;gap:6px}
+.donut-leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.donut-leg-name{color:#6B7280;font-weight:500}
+.donut-leg-val{font-weight:700;color:#111827}
 .trend-card{background:#fff;border-radius:20px;padding:1.2rem 1.4rem;border:1px solid rgba(0,0,0,.06);box-shadow:0 4px 16px rgba(0,0,0,.06);display:flex;flex-direction:column}
 .trend-title{font-size:10px;color:#9CA3AF;margin-bottom:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px}
 .trend-wrap{position:relative;flex:1;min-height:130px}
@@ -221,10 +221,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   .filter-btn{padding:6px 10px;font-size:11px}
   .filter-dropdown{width:220px}
 
-  /* Top section: stack overview + trend vertically */
+  /* Top section: stack donut + trend vertically */
   .top-section{grid-template-columns:1fr;gap:10px}
-  .overview-card{padding:1rem 1.2rem;min-height:auto}
-  .ov-val{font-size:15px}
+  .donut-card{padding:1rem;min-height:240px}
+  .donut-wrap{min-height:140px}
   .trend-wrap{min-height:160px}
 
   /* Biz tabs: wrap, smaller */
@@ -395,9 +395,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <div id="detail-page">
     <!-- Overview + Trend -->
     <div class="top-section">
-      <div class="overview-card" id="overview-card">
-        <div class="ov-label">Overall Summary</div>
-        <div class="ov-rows" id="ov-rows"></div>
+      <div class="donut-card">
+        <div class="donut-title"><i class="ti ti-chart-pie" style="font-size:12px;vertical-align:-1px"></i> DD Count by Business</div>
+        <div class="donut-wrap"><canvas id="donut-chart" role="img" aria-label="Dealer count donut chart"></canvas></div>
+        <div class="donut-legend" id="donut-legend"></div>
       </div>
       <div class="trend-card">
         <div class="trend-title">Monthly Billing Trend (₹ Lacs) — All Business</div>
@@ -640,23 +641,96 @@ function renderDetail(){
 }
 
 function renderOverviewAndTrend(){
-  // Combined totals
-  let totalDD=0,totalYtdBV=0,totalMtdBV=0,totalYtdA=0,totalMtdA=0;
-  BIZ_LIST.forEach(b=>{
-    const d=analyseFor(b);
-    totalDD+=d.totalDD; totalYtdBV+=d.ytdBV; totalMtdBV+=d.mtdBV;
-    totalYtdA+=d.ytdActive; totalMtdA+=d.mtdActive;
-  });
   // MTD month
   const allFYRows=RAW.filter(r=>r['FY']===ACTIVE_FY);
   const mtdM=getMTD(allFYRows);
   document.getElementById('mtd-badge').textContent='MTD: '+(mtdM||'—');
-  document.getElementById('ov-rows').innerHTML=`
-    <div class="ov-row"><span class="ov-lbl">Total DD</span><span class="ov-val">${fmtInt(totalDD)}</span></div>
-    <div class="ov-row"><span class="ov-lbl">YTD Billed</span><span class="ov-val">₹${fmt(totalYtdBV)}</span></div>
-    <div class="ov-row"><span class="ov-lbl">MTD Billed</span><span class="ov-val">₹${fmt(totalMtdBV)}</span></div>
-    <div class="ov-row"><span class="ov-lbl">YTD Active</span><span class="ov-val">${fmtInt(totalYtdA)}</span></div>
-    <div class="ov-row"><span class="ov-lbl">MTD Active</span><span class="ov-val">${fmtInt(totalMtdA)}</span></div>`;
+
+  // ── Donut chart — DD count per business (respects all filters) ──
+  const donutData=BIZ_LIST.map(b=>analyseFor(b).totalDD);
+  const donutColors=['#2563EB','#059669','#7C3AED'];
+  const donutLabels=['HW','ERG','ST'];
+  const donutTotal=donutData.reduce((s,v)=>s+v,0);
+
+  if(CHARTS['donut']){CHARTS['donut'].destroy();delete CHARTS['donut']}
+  setTimeout(()=>{
+    const canvas=document.getElementById('donut-chart');
+    if(!canvas)return;
+    CHARTS['donut']=new Chart(canvas,{
+      type:'doughnut',
+      data:{
+        labels:donutLabels,
+        datasets:[{
+          data:donutData,
+          backgroundColor:donutColors,
+          borderColor:'#fff',
+          borderWidth:3,
+          hoverBorderWidth:3,
+          hoverOffset:6
+        }]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        cutout:'68%',
+        plugins:{
+          legend:{display:false},
+          tooltip:{callbacks:{
+            label:v=>v.label+': '+fmtInt(v.raw)+' DD ('+Math.round(v.raw/Math.max(donutTotal,1)*100)+'%)'
+          }}
+        }
+      },
+      plugins:[{
+        id:'donutCenter',
+        afterDraw(chart){
+          const {ctx,chartArea:{top,bottom,left,right}}=chart;
+          const cx=(left+right)/2, cy=(top+bottom)/2;
+          ctx.save();
+          ctx.font='700 22px -apple-system,sans-serif';
+          ctx.fillStyle='#111827';
+          ctx.textAlign='center';
+          ctx.textBaseline='middle';
+          ctx.fillText(fmtInt(donutTotal),cx,cy-8);
+          ctx.font='500 10px -apple-system,sans-serif';
+          ctx.fillStyle='#9CA3AF';
+          ctx.fillText('Total DD',cx,cy+10);
+          ctx.restore();
+        }
+      },{
+        id:'donutLabels',
+        afterDatasetsDraw(chart){
+          const ctx=chart.ctx;
+          const meta=chart.getDatasetMeta(0);
+          ctx.save();
+          meta.data.forEach((arc,i)=>{
+            const val=donutData[i];
+            if(!val)return;
+            const pct=Math.round(val/Math.max(donutTotal,1)*100);
+            const angle=(arc.startAngle+arc.endAngle)/2;
+            const r=(arc.outerRadius+arc.innerRadius)/2;
+            const x=arc.x+Math.cos(angle)*r;
+            const y=arc.y+Math.sin(angle)*r;
+            ctx.font='700 10px -apple-system,sans-serif';
+            ctx.fillStyle='#fff';
+            ctx.textAlign='center';
+            ctx.textBaseline='middle';
+            if(pct>=6) ctx.fillText(pct+'%',x,y);
+          });
+          ctx.restore();
+        }
+      }]
+    });
+
+    // Legend
+    document.getElementById('donut-legend').innerHTML=donutLabels.map((lbl,i)=>`
+      <div class="donut-leg-item">
+        <div class="donut-leg-left">
+          <div class="donut-leg-dot" style="background:${donutColors[i]}"></div>
+          <span class="donut-leg-name">${lbl}</span>
+        </div>
+        <span class="donut-leg-val">${fmtInt(donutData[i])} DD</span>
+      </div>`).join('');
+  },50);
 
   // Combined trend chart
   if(CHARTS['trend-all']){CHARTS['trend-all'].destroy();delete CHARTS['trend-all']}
