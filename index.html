@@ -116,6 +116,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .content-panel{min-width:0}
 
 /* ── KPI Row (7 chips) ── */
+.kpi-row{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-bottom:1rem}
+.kpi-chip{border-radius:14px;padding:.8rem .9rem;box-shadow:0 3px 10px rgba(0,0,0,.08);position:relative;overflow:hidden}
+.kpi-chip::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:rgba(255,255,255,.35);border-radius:14px 14px 0 0}
+.kc-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.7px;font-weight:700;opacity:.72;margin-bottom:.25rem}
+.kc-val{font-size:15px;font-weight:800;line-height:1;word-break:break-all}
+.kc-sub{font-size:9px;margin-top:2px;opacity:.55}
+.kc0{background:linear-gradient(145deg,#EA580C,#C2410C);color:#fff}
+.kc1{background:linear-gradient(145deg,#7C3AED,#6D28D9);color:#fff}
+.kc2{background:linear-gradient(145deg,#059669,#047857);color:#fff}
+.kc3{background:linear-gradient(145deg,#0891B2,#0E7490);color:#fff}
+.kc4{background:linear-gradient(145deg,#D97706,#B45309);color:#fff}
+.kc5{background:linear-gradient(145deg,#DC2626,#991B1B);color:#fff}
+.kc6{background:linear-gradient(145deg,#374151,#1F2937);color:#fff}
 
 /* Drill-down button */
 .drill-btn{display:flex;align-items:center;gap:6px;padding:7px 16px;border-radius:12px;border:1.5px solid;background:transparent;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;margin-bottom:1rem;width:fit-content}
@@ -216,7 +229,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   .vtab-dd{font-size:9px}
 
   /* KPI chips: 2 per row on mobile */
-        
+  .kpi-row{grid-template-columns:repeat(2,1fr);gap:7px}
+  .kpi-chip{padding:.7rem .8rem}
+  .kc-val{font-size:14px}
+  .kc-lbl{font-size:8px}
+
   /* SBU cards: 2 per row on mobile */
   .cat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
   .cat-card{padding:.65rem .75rem}
@@ -254,7 +271,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   .fy-separator{margin:0 2px}
 
   /* 1 KPI chip per row on tiny screens */
-    
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .kc-val{font-size:13px}
+
   /* Vtabs: 2 per row */
   .vtabs{display:grid;grid-template-columns:repeat(2,1fr)}
   .vtab-divider{display:none}
@@ -271,7 +290,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   .drill-btn{font-size:11px;padding:6px 12px}
 }
 
-.mhover:hover{background:#F9FAFB}
 </style>
 </head>
 <body>
@@ -411,6 +429,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 // ── STATE ──────────────────────────────────────────────────────
 let RAW=[], ACTIVE_FY='', ALL_FYS=[];
 let CURRENT_BIZ='HW', CURRENT_PAGE='detail';
+let DRILL_OPEN=false;
 const CHARTS={};
 const ACT_SBU=new Set();
 const MONTH_ORDER=['April','May','June','July','August','September','October','November','December','January','February','March'];
@@ -812,6 +831,7 @@ function renderVTabs(){
 
 function switchBiz(biz){
   CURRENT_BIZ=biz;
+  DRILL_OPEN=false;
   ACT_SBU.clear();renderSBUPills();
   // refresh subgroup/customer — ALL = all businesses, otherwise scope to biz
   const fyBizRows=biz==='ALL'
@@ -838,31 +858,50 @@ function renderContent(){
   panel.innerHTML=`
     <!-- Applied filter chips — filled by JS after render -->
     <div id="filter-chips-row" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:.75rem"></div>
+    <!-- KPI row: 7 chips -->
+    <div class="kpi-row">
+      <div class="kpi-chip kc0"><div class="kc-lbl">Total DD</div><div class="kc-val">${fmtInt(d.totalDD)}</div><div class="kc-sub">Direct Dealers</div></div>
+      <div class="kpi-chip kc2"><div class="kc-lbl">YTD Active</div><div class="kc-val">${fmtInt(d.ytdActive)}</div><div class="kc-sub">DD</div></div>
+      <div class="kpi-chip kc4"><div class="kc-lbl">MTD Active</div><div class="kc-val">${fmtInt(d.mtdActive)}</div><div class="kc-sub">DD</div></div>
+      <div class="kpi-chip kc1"><div class="kc-lbl">YTD Billed</div><div class="kc-val">₹${fmtInt(d.ytdBV)}</div><div class="kc-sub">₹ Lacs</div></div>
+      <div class="kpi-chip kc5"><div class="kc-lbl">MTD Billed</div><div class="kc-val">₹${fmtInt(d.mtdBV)}</div><div class="kc-sub">₹ Lacs</div></div>
+      <div class="kpi-chip kc6"><div class="kc-lbl">Active %</div><div class="kc-val">${pct}%</div><div class="kc-sub">YTD vs total</div></div>
+    </div>
+
+    <!-- Drill-down button -->
+    <button class="drill-btn${DRILL_OPEN?' open':''}" id="drill-btn" style="color:${cfg.acc};border-color:${cfg.acc}" onclick="toggleDrill()">
+      <i class="ti ti-map-pin" style="font-size:14px"></i>
+      Customer State Drill-Down
+      <i class="ti ti-chevron-down" style="font-size:13px"></i>
+    </button>
+
+    <!-- Drill-down state table -->
+    <div id="drill-section" style="display:${DRILL_OPEN?'block':'none'}">
+      <div class="drill-section">
+        <div class="drill-table-title" style="font-size:11px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:.8rem;display:flex;align-items:center;gap:6px">
+          <i class="ti ti-map-pin" style="font-size:13px;color:${cfg.acc}"></i> ${CURRENT_BIZ==='ALL'?'All Businesses':CURRENT_BIZ} — Customer State Level Detail
+        </div>
+        <div style="overflow-x:auto">
+          <table class="drill-table">
+            <thead><tr>
+              <th>State</th>
+              <th>Total DD</th>
+              <th>YTD Active</th>
+              <th>MTD Active</th>
+              <th>Total Billed (₹ L)</th>
+              <th>YTD Billed (₹ L)</th>
+              <th>MTD Billed (₹ L)</th>
+              <th>Active %</th>
+            </tr></thead>
+            <tbody>${renderStateTableRows(d)}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- SBU cards -->
     <div class="sbu-sec-title"><i class="ti ti-layout-grid" style="font-size:13px"></i> SBU Breakdown <span style="font-size:10px;font-weight:400;color:#D1D5DB">— click to filter · multi-select</span></div>
     <div class="cat-grid${ACT_SBU.size>0?' has-sel':''}" id="sbu-grid"></div>
-
-    <!-- State Matrix -->
-    <div style="margin-top:1rem">
-      <div style="font-size:11px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:.8rem;display:flex;align-items:center;gap:6px">
-        <i class="ti ti-table" style="font-size:13px;color:${cfg.acc}"></i> Business &times; State Breakdown
-      </div>
-      <div style="overflow-x:auto;border-radius:14px;border:1px solid #F3F4F6;box-shadow:0 1px 4px rgba(0,0,0,.05)">
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead>
-            <tr style="background:#F9FAFB">
-              <th style="padding:8px 12px;text-align:left;font-size:10px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #E5E7EB">Business</th>
-              <th style="padding:8px 12px;text-align:left;font-size:10px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #E5E7EB">State</th>
-              <th style="padding:8px 12px;text-align:right;font-size:10px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #E5E7EB">YTD Active</th>
-              <th style="padding:8px 12px;text-align:right;font-size:10px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #E5E7EB">MTD Active</th>
-              <th style="padding:8px 12px;text-align:right;font-size:10px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #E5E7EB">YTD Billed</th>
-              <th style="padding:8px 12px;text-align:right;font-size:10px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #E5E7EB">MTD Billed</th>
-            </tr>
-          </thead>
-          <tbody id="state-matrix-body"></tbody>
-        </table>
-      </div>
-    </div>
 
     <!-- State vertical bar chart -->
     <div class="state-section">
@@ -877,8 +916,6 @@ function renderContent(){
 
   // Render SBU cards
   renderSBUCards(d,cfg);
-  // Render state matrix
-  setTimeout(()=>renderStateMatrix(),30);
 
   // Render state vertical bar chart
   setTimeout(()=>{
@@ -936,90 +973,130 @@ function renderContent(){
   },60);
 }
 
-function renderStateMatrix(){
-  const tbody=document.getElementById('state-matrix-body');
-  if(!tbody)return;
-  const bizList=CURRENT_BIZ==='ALL'?BIZ_LIST:[CURRENT_BIZ];
-  let html='';
-  const TD='padding:8px 12px;font-size:12px;border-bottom:1px solid #F3F4F6;';
-  const TDSUB='padding:8px 12px;font-size:12px;font-weight:800;border-bottom:2px solid #6EE7B7;';
-  bizList.forEach(biz=>{
-    const cfg=BIZ_CFG[biz];
-    const rows=getFilteredRows(biz);
-    const mtdM=getMTD(rows);
-    const mtdRows=rows.filter(r=>r['Months']===mtdM);
-    const sm={};
-    rows.forEach(r=>{
-      const st=r['Customer State']||'Other';
-      if(!sm[st])sm[st]={ytdBV:0,mtdBV:0,ytdD:new Set(),mtdD:new Set()};
-      sm[st].ytdBV+=parseFloat(r['BV'])||0;
-      if(r['Customer Code'])sm[st].ytdD.add(r['Customer Code']);
-    });
-    mtdRows.forEach(r=>{
-      const st=r['Customer State']||'Other';
-      if(!sm[st])sm[st]={ytdBV:0,mtdBV:0,ytdD:new Set(),mtdD:new Set()};
-      sm[st].mtdBV+=parseFloat(r['BV'])||0;
-      if(r['Customer Code'])sm[st].mtdD.add(r['Customer Code']);
-    });
-    const entries=Object.entries(sm).sort((a,b)=>b[1].ytdBV-a[1].ytdBV);
-    const tot=entries.reduce((s,[,v])=>({ytdA:s.ytdA+v.ytdD.size,mtdA:s.mtdA+v.mtdD.size,ytdBV:s.ytdBV+v.ytdBV,mtdBV:s.mtdBV+v.mtdBV}),{ytdA:0,mtdA:0,ytdBV:0,mtdBV:0});
-    // Subtotal row
-    html+='<tr style="background:#ECFDF5">'
-      +'<td style="'+TDSUB+'color:'+cfg.acc+'"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:'+cfg.acc+';display:inline-block"></span>'+biz+'</span></td>'
-      +'<td style="'+TDSUB+'color:#065F46;font-style:italic">All States</td>'
-      +'<td style="'+TDSUB+'text-align:right;color:'+cfg.acc+'">'+fmtInt(tot.ytdA)+'</td>'
-      +'<td style="'+TDSUB+'text-align:right;color:#065F46">'+fmtInt(tot.mtdA)+'</td>'
-      +'<td style="'+TDSUB+'text-align:right;color:#065F46">'+fmt(tot.ytdBV)+'</td>'
-      +'<td style="'+TDSUB+'text-align:right;color:#065F46">'+fmt(tot.mtdBV)+'</td>'
-      +'</tr>';
-    // State rows
-    entries.forEach(([st,v])=>{
-      html+='<tr class="mhover">'
-        +'<td style="'+TD+'color:#D1D5DB"></td>'
-        +'<td style="'+TD+'padding-left:24px;color:#374151">'+st+'</td>'
-        +'<td style="'+TD+'text-align:right;color:'+cfg.acc+';font-weight:600">'+fmtInt(v.ytdD.size)+'</td>'
-        +'<td style="'+TD+'text-align:right">'+fmtInt(v.mtdD.size)+'</td>'
-        +'<td style="'+TD+'text-align:right">'+fmt(v.ytdBV)+'</td>'
-        +'<td style="'+TD+'text-align:right">'+fmt(v.mtdBV)+'</td>'
-        +'</tr>';
-    });
-    if(bizList.length>1)html+='<tr><td colspan="6" style="padding:4px;background:#F0F2F7"></td></tr>';
+function renderStateTableRows(d){
+  // Get state-level data including mtd
+  const biz=CURRENT_BIZ; // may be 'ALL'
+  const rows=getFilteredRows(biz);
+  const mtdM=getMTD(rows);
+  const mtdRows=rows.filter(r=>r['Months']===mtdM);
+  const bvSum=a=>a.reduce((s,r)=>s+(parseFloat(r['BV'])||0),0);
+  const uniq=a=>[...new Set(a.map(r=>r['Customer Code']).filter(Boolean))].length;
+
+  const stateMap={};
+  rows.forEach(r=>{
+    const st=r['Customer State']||'Other';
+    if(!stateMap[st])stateMap[st]={ytdBV:0,mtdBV:0,ytdD:new Set(),mtdD:new Set(),allD:new Set()};
+    stateMap[st].ytdBV+=parseFloat(r['BV'])||0;
+    if(r['Customer Code']){stateMap[st].ytdD.add(r['Customer Code']);stateMap[st].allD.add(r['Customer Code'])}
   });
-  tbody.innerHTML=html;
+  mtdRows.forEach(r=>{
+    const st=r['Customer State']||'Other';
+    if(!stateMap[st])stateMap[st]={ytdBV:0,mtdBV:0,ytdD:new Set(),mtdD:new Set(),allD:new Set()};
+    stateMap[st].mtdBV+=parseFloat(r['BV'])||0;
+    if(r['Customer Code'])stateMap[st].mtdD.add(r['Customer Code']);
+  });
+
+  // All-time DD per state for this biz (ALL = across all businesses)
+  const allBase=biz==='ALL'?RAW:RAW.filter(r=>r['Business']===biz);
+  const allStateDD={};
+  allBase.forEach(r=>{const st=r['Customer State']||'Other';if(!allStateDD[st])allStateDD[st]=new Set();if(r['Customer Code'])allStateDD[st].add(r['Customer Code'])});
+
+  return Object.entries(stateMap).sort((a,b)=>b[1].ytdBV-a[1].ytdBV).map(([st,v])=>{
+    const totalDD=(allStateDD[st]||new Set()).size;
+    const ytdA=v.ytdD.size, mtdA=v.mtdD.size;
+    const pct=totalDD>0?Math.round(ytdA/totalDD*100):0;
+    return`<tr>
+      <td class="td-state">${st}</td>
+      <td class="td-num">${fmtInt(totalDD)}</td>
+      <td class="td-num">${fmtInt(ytdA)}</td>
+      <td class="td-num">${fmtInt(mtdA)}</td>
+      <td class="td-num">₹${fmt(v.ytdBV)}</td>
+      <td class="td-num">₹${fmt(v.ytdBV)}</td>
+      <td class="td-num">₹${fmt(v.mtdBV)}</td>
+      <td class="td-num">${pct}%</td>
+    </tr>`;
+  }).join('');
 }
 
+function renderFilterChips(){
+  const el=document.getElementById('filter-chips-row');
+  if(!el)return;
+  el.innerHTML='';
+  // Month chip
+  if(FS.month.act.length<FS.month.all.length){
+    const sp=makeChip('Months: '+FS.month.act.slice(0,2).join(', ')+(FS.month.act.length>2?'…':''));
+    sp.querySelector('i.rm').addEventListener('click',()=>{resetFilter('month')});
+    el.appendChild(sp);
+  }
+  // State chip
+  if(FS.state.act.length<FS.state.all.length){
+    const lbl=FS.state.act.length===1?FS.state.act[0]:FS.state.act.length+' States';
+    const sp=makeChip(lbl,'ti-map-pin');
+    sp.querySelector('i.rm').addEventListener('click',()=>{resetFilter('state')});
+    el.appendChild(sp);
+  }
+  // Subgroup chip
+  if(FS.subgroup.act.length<FS.subgroup.all.length){
+    const lbl=FS.subgroup.act.length===1?FS.subgroup.act[0]:FS.subgroup.act.length+' Sub-Groups';
+    const sp=makeChip(lbl,'ti-tag');
+    sp.querySelector('i.rm').addEventListener('click',()=>{resetFilter('subgroup')});
+    el.appendChild(sp);
+  }
+  // Customer chip
+  if(FS.customer.act.length<FS.customer.all.length){
+    const lbl=FS.customer.act.length===1?FS.customer.act[0]:FS.customer.act.length+' Customers';
+    const sp=makeChip(lbl,'ti-user');
+    sp.querySelector('i.rm').addEventListener('click',()=>{resetFilter('customer')});
+    el.appendChild(sp);
+  }
+  // SBU chips
+  [...ACT_SBU].forEach(sbu=>{
+    const sp=makeChip('SBU: '+sbu,'ti-layout-grid','#7C3AED','#EDE9FE','#C4B5FD');
+    sp.querySelector('i.rm').addEventListener('click',()=>{removeSBU(sbu)});
+    el.appendChild(sp);
+  });
+  // Clear all chip if multiple filters
+  const total=(FS.month.act.length<FS.month.all.length?1:0)+(FS.state.act.length<FS.state.all.length?1:0)+(FS.subgroup.act.length<FS.subgroup.all.length?1:0)+(FS.customer.act.length<FS.customer.all.length?1:0)+ACT_SBU.size;
+  if(total>1){
+    const sp=makeChip('Clear all','ti-filter-off','#DC2626','#FEF2F2','#FECACA',true);
+    sp.style.cursor='pointer';
+    sp.addEventListener('click',()=>{clearAllFilters()});
+    el.appendChild(sp);
+  }
+}
+function makeChip(label,icon='ti-filter',textColor='#4338CA',bg='#EEF2FF',border='#C7D2FE',noX=false){
+  const sp=document.createElement('span');
+  sp.style.cssText='display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;background:'+bg+';border:1px solid '+border+';font-size:11px;font-weight:600;color:'+textColor+';white-space:nowrap';
+  sp.innerHTML='<i class="ti '+icon+'" style="font-size:11px"></i>'+label+(noX?'':'<i class="ti ti-x rm" style="font-size:10px;cursor:pointer;margin-left:2px"></i>');
+  return sp;
+}
+function resetFilter(key){FS[key].act=[...FS[key].all];FS[key].pend=[...FS[key].all];updateDDBadge(key);if(CURRENT_PAGE==='detail')renderDetail();else renderSummary()}
+
+function toggleDrill(){
+  DRILL_OPEN=!DRILL_OPEN;
+  document.getElementById('drill-btn').classList.toggle('open',DRILL_OPEN);
+  document.getElementById('drill-section').style.display=DRILL_OPEN?'block':'none';
+}
 
 function renderSBUCards(d,cfg){
   const sbuTotal=d.sbuTotal||1;
   const grid=document.getElementById('sbu-grid');
   if(!grid)return;
-  if(!d.sbus||!d.sbus.length){grid.innerHTML='<div class="no-data">No SBU data</div>';return;}
-  let html='';
-  d.sbus.forEach((s,i)=>{
-    const p=Math.round(s.bv/sbuTotal*100);
-    const sel=ACT_SBU.has(s.name);
-    html+='<div class="cat-card'+(sel?' sel':'')+'" style="background:'+CAT_GRAD[i%CAT_GRAD.length]+'" data-sbu="'+i+'" onclick="handleSBUClick(this)">'
-      +'<div class="cc-c1"></div><div class="cc-c2"></div>'
-      +(sel?'<div style="position:absolute;top:10px;right:10px;z-index:2;background:rgba(255,255,255,.25);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center"><i class="ti ti-check" style="font-size:13px;color:#fff"></i></div>':'')
-      +'<span class="cc-icon">'+CAT_ICONS[i%CAT_ICONS.length]+'</span>'
-      +'<div class="cc-name">'+s.name.toUpperCase().slice(0,28)+'</div>'
-      +'<div class="cc-val">₹'+fmt(s.bv)+'</div>'
-      +'<div class="cc-pct">'+p+'% of total · '+s.dealers+' DD</div>'
-      +'<div class="cc-prog"><div class="cc-fill" style="width:'+p+'%"></div></div>'
-      +'</div>';
-  });
-  grid.innerHTML=html;
-  _sbuNames=d.sbus.map(s=>s.name);
+  grid.innerHTML=d.sbus.length
+    ?d.sbus.map((s,i)=>{
+        const p=Math.round(s.bv/sbuTotal*100);const sel=ACT_SBU.has(s.name);
+        return`<div class="cat-card${sel?' sel':''}" style="background:${CAT_GRAD[i%CAT_GRAD.length]}" onclick="toggleSBU('${s.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">
+          <div class="cc-c1"></div><div class="cc-c2"></div>
+          ${sel?'<div style="position:absolute;top:10px;right:10px;z-index:2;background:rgba(255,255,255,.25);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center"><i class="ti ti-check" style="font-size:13px;color:#fff"></i></div>':''}
+          <span class="cc-icon">${CAT_ICONS[i%CAT_ICONS.length]}</span>
+          <div class="cc-name">${s.name.toUpperCase().slice(0,28)}</div>
+          <div class="cc-val">₹${fmt(s.bv)}</div>
+          <div class="cc-pct">${p}% of total · ${s.dealers} DD</div>
+          <div class="cc-prog"><div class="cc-fill" style="width:${p}%"></div></div>
+        </div>`}).join('')
+    :'<div class="no-data">No SBU data</div>';
   grid.classList.toggle('has-sel',ACT_SBU.size>0);
 }
-
-// Store SBU names for click handler
-let _sbuNames=[];
-function handleSBUClick(el){
-  const i=parseInt(el.getAttribute('data-sbu'));
-  if(!isNaN(i)&&_sbuNames[i]) toggleSBU(_sbuNames[i]);
-}
-
 
 // ── SBU MULTI-SELECT ───────────────────────────────────────────
 function toggleSBU(name){
