@@ -292,10 +292,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 
 /* Summary focus mode */
-.sum-trend-card.focused{grid-column:1/-1;z-index:10}
-.sum-trend-card.focused .sum-trend-wrap{height:320px!important}
 #sum-trend-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:1.2rem}
+.sum-trend-card.focused{border:2px solid currentColor}
+#sum-trend-row.has-focus .sum-trend-card:not(.focused){display:none}
 #sum-trend-row.has-focus{grid-template-columns:1fr}
+#sum-trend-row.has-focus .sum-trend-card.focused .sum-trend-wrap{height:380px!important}
 </style>
 </head>
 <body>
@@ -434,17 +435,23 @@ function toggleSumFocus(biz){
   const card=document.getElementById('stc-'+biz);
   const row=document.getElementById('sum-trend-row');
   const isFocused=card.classList.contains('focused');
-  // Remove all focused cards first
-  document.querySelectorAll('.sum-trend-card.focused').forEach(c=>c.classList.remove('focused'));
+  // Remove focused from all cards
+  document.querySelectorAll('.sum-trend-card').forEach(c=>{
+    c.classList.remove('focused');
+    const btn=c.querySelector('button');
+    if(btn) btn.textContent='⛶ Focus';
+  });
   row.classList.remove('has-focus');
   if(!isFocused){
     card.classList.add('focused');
     row.classList.add('has-focus');
+    const btn=card.querySelector('button');
+    if(btn) btn.textContent='✕ Exit Focus';
   }
   // Redraw charts after layout change
   setTimeout(()=>{
-    BIZ_LIST.forEach(b=>{if(sumCharts[b])sumCharts[b].resize()});
-  },100);
+    BIZ_LIST.forEach(b=>{if(sumCharts[b]){try{sumCharts[b].resize()}catch(e){}}});
+  },150);
 }
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -919,7 +926,7 @@ function renderContent(){
   renderSBUCards(d,cfg);
 
   // Render drill table if open
-  if(DRILL_OPEN) setTimeout(()=>renderDrillTable(),60);
+  if(DRILL_OPEN) requestAnimationFrame(()=>requestAnimationFrame(()=>renderDrillTable()));
 
   // Render state vertical bar chart
   setTimeout(()=>{
@@ -1994,7 +2001,7 @@ function renderContent(){
   renderSBUCards(d,cfg);
 
   // Render drill table if open
-  if(DRILL_OPEN) setTimeout(()=>renderDrillTable(),60);
+  if(DRILL_OPEN) requestAnimationFrame(()=>requestAnimationFrame(()=>renderDrillTable()));
 
   // Render state vertical bar chart
   setTimeout(()=>{
