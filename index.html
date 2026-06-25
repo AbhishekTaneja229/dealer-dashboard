@@ -511,7 +511,9 @@ function openChartFullscreen(chartKey, title){
     var chartOpts = JSON.parse(JSON.stringify(srcChart.config.options||{}));
     chartOpts.responsive = true;
     chartOpts.maintainAspectRatio = false;
-    chartOpts.layout = {padding:{top:44,bottom:8,left:8,right:8}};
+
+    if(chartOpts.scales&&chartOpts.scales.y){chartOpts.scales.y.display=false;}
+    chartOpts.layout = {padding:{top:70,bottom:8,left:8,right:8}};
 
     // Rebuild data label plugin from scratch based on chart type
     var dlPlugin = {
@@ -534,7 +536,7 @@ function openChartFullscreen(chartKey, title){
               ctx.fillStyle=(barColor||'#374151').toString().slice(0,7); // strip alpha
               ctx.textAlign='center';
               ctx.textBaseline='bottom';
-              ctx.fillText('₹'+parseFloat(val).toFixed(1), x, y-8);
+              ctx.fillText('₹'+parseFloat(val).toFixed(1), x, y-10);
             } else {
               // Line chart - label above point
               ctx.font='700 10px -apple-system,sans-serif';
@@ -1202,7 +1204,7 @@ function renderContent(){
           x:{ticks:{font:{size:10},color:'#6B7280',autoSkip:false,maxRotation:45,minRotation:30},grid:{display:false},border:{display:false}},
           y:{display:false,grid:{display:false},border:{display:false}}
         },
-        layout:{padding:{top:48,left:4,right:4,bottom:4}}
+        layout:{padding:{top:60,left:4,right:4,bottom:4}}
       },
       plugins:[{
         id:'barTopLabels',
