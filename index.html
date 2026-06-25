@@ -530,6 +530,21 @@ function openChartFullscreen(chartKey, title){
   }, 50);
 }
 
+
+// Matrix expand/collapse all
+document.addEventListener('click', function(e){
+  var btn = e.target.closest('#btn-matrix-expand-all, #btn-matrix-collapse-all');
+  if(!btn) return;
+  var collapse = btn.id === 'btn-matrix-collapse-all';
+  ['HW','ERG','ST'].forEach(function(biz){
+    var grpId = 'smgrp-'+biz;
+    var rows = document.querySelectorAll('tr.'+grpId);
+    var ic = document.getElementById(grpId+'-ic');
+    rows.forEach(function(r){ r.style.display = collapse ? 'none' : ''; });
+    if(ic){ ic.textContent = collapse ? '▶' : '▼'; ic.setAttribute('data-open', collapse ? '0' : '1'); }
+  });
+});
+
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js">
 function sumFocus(biz){
@@ -627,6 +642,21 @@ function openChartFullscreen(chartKey, title){
     });
   }, 50);
 }
+
+
+// Matrix expand/collapse all
+document.addEventListener('click', function(e){
+  var btn = e.target.closest('#btn-matrix-expand-all, #btn-matrix-collapse-all');
+  if(!btn) return;
+  var collapse = btn.id === 'btn-matrix-collapse-all';
+  ['HW','ERG','ST'].forEach(function(biz){
+    var grpId = 'smgrp-'+biz;
+    var rows = document.querySelectorAll('tr.'+grpId);
+    var ic = document.getElementById(grpId+'-ic');
+    rows.forEach(function(r){ r.style.display = collapse ? 'none' : ''; });
+    if(ic){ ic.textContent = collapse ? '▶' : '▼'; ic.setAttribute('data-open', collapse ? '0' : '1'); }
+  });
+});
 
 </script>
 <script>
@@ -1068,8 +1098,12 @@ function renderContent(){
 
     <!-- Business x State Matrix -->
     <div style="margin-bottom:1rem;border-radius:16px;border:1px solid #E5E7EB;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)">
-      <div style="padding:10px 14px;font-size:11px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.7px;background:#F9FAFB;border-bottom:1px solid #E5E7EB;display:flex;align-items:center;gap:6px">
-        <i class="ti ti-table" style="font-size:13px"></i> Business &times; Customer State
+      <div style="padding:10px 14px;font-size:11px;color:#6B7280;font-weight:700;text-transform:uppercase;letter-spacing:.7px;background:#F9FAFB;border-bottom:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between">
+        <span style="display:flex;align-items:center;gap:6px"><i class="ti ti-table" style="font-size:13px"></i> Business &times; Customer State</span>
+        <span style="display:flex;align-items:center;gap:8px">
+          <button id="btn-matrix-expand-all" title="Expand all" style="border:1px solid #D1D5DB;background:#fff;cursor:pointer;color:#6B7280;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:600">&#9660; Expand All</button>
+          <button id="btn-matrix-collapse-all" title="Collapse all" style="border:1px solid #D1D5DB;background:#fff;cursor:pointer;color:#6B7280;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:600">&#9654; Collapse All</button>
+        </span>
       </div>
       <div style="overflow-x:auto;max-height:420px;overflow-y:auto">
         <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -1523,6 +1557,21 @@ function openChartFullscreen(chartKey, title){
     });
   }, 50);
 }
+
+
+// Matrix expand/collapse all
+document.addEventListener('click', function(e){
+  var btn = e.target.closest('#btn-matrix-expand-all, #btn-matrix-collapse-all');
+  if(!btn) return;
+  var collapse = btn.id === 'btn-matrix-collapse-all';
+  ['HW','ERG','ST'].forEach(function(biz){
+    var grpId = 'smgrp-'+biz;
+    var rows = document.querySelectorAll('tr.'+grpId);
+    var ic = document.getElementById(grpId+'-ic');
+    rows.forEach(function(r){ r.style.display = collapse ? 'none' : ''; });
+    if(ic){ ic.textContent = collapse ? '▶' : '▼'; ic.setAttribute('data-open', collapse ? '0' : '1'); }
+  });
+});
 
 </script>
 </body>
