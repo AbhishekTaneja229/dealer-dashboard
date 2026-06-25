@@ -558,6 +558,7 @@ function openChartFullscreen(chartKey, title){
     var opts={
       responsive:true,
       maintainAspectRatio:false,
+      animation:{duration:400},
       layout:{padding:{top:60,bottom:8,left:8,right:8}},
       plugins:{
         legend:srcChart.config.options&&srcChart.config.options.plugins&&srcChart.config.options.plugins.legend
@@ -586,6 +587,42 @@ function openChartFullscreen(chartKey, title){
       options:opts,
       plugins:[labelPlugin]
     });
+
+    // Draw labels after animation completes
+    setTimeout(function(){
+      if(!window._fsChart)return;
+      var chart=window._fsChart;
+      var ctx=chart.ctx;
+      ctx.save();
+      if(srcType==='bar'){
+        var meta=chart.getDatasetMeta(0);
+        var ds=chart.data.datasets[0];
+        meta.data.forEach(function(bar,i){
+          var val=ds.data[i];
+          if(!val)return;
+          ctx.font='bold 11px -apple-system,sans-serif';
+          ctx.fillStyle='#374151';
+          ctx.textAlign='center';
+          ctx.textBaseline='bottom';
+          ctx.fillText('₹'+parseFloat(val).toFixed(1),bar.x,bar.y-4);
+        });
+      } else {
+        chart.data.datasets.forEach(function(ds,di){
+          var meta=chart.getDatasetMeta(di);
+          if(meta.hidden)return;
+          meta.data.forEach(function(pt,i){
+            var val=ds.data[i];
+            if(!val)return;
+            ctx.font='bold 10px -apple-system,sans-serif';
+            ctx.fillStyle=ds.borderColor||'#374151';
+            ctx.textAlign='center';
+            ctx.textBaseline='bottom';
+            ctx.fillText('₹'+parseFloat(val).toFixed(1),pt.x,pt.y-10);
+          });
+        });
+      }
+      ctx.restore();
+    },600);
   },100);
 }
 
