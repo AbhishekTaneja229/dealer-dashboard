@@ -446,6 +446,19 @@ function sumFocus(biz){
   },150);
 }
 
+
+// Matrix group collapse via event delegation
+document.addEventListener('click', function(e){
+  var tr = e.target.closest('tr[data-grp]');
+  if(!tr) return;
+  var grpId = tr.getAttribute('data-grp');
+  var rows = document.querySelectorAll('tr.'+grpId);
+  var ic = document.getElementById(grpId+'-ic');
+  var isOpen = ic && ic.getAttribute('data-open') !== '0';
+  rows.forEach(function(r){ r.style.display = isOpen ? 'none' : ''; });
+  if(ic){ ic.textContent = isOpen ? '▶' : '▼'; ic.setAttribute('data-open', isOpen ? '0' : '1'); }
+});
+
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js">
 function sumFocus(biz){
@@ -471,6 +484,19 @@ function sumFocus(biz){
     });
   },150);
 }
+
+
+// Matrix group collapse via event delegation
+document.addEventListener('click', function(e){
+  var tr = e.target.closest('tr[data-grp]');
+  if(!tr) return;
+  var grpId = tr.getAttribute('data-grp');
+  var rows = document.querySelectorAll('tr.'+grpId);
+  var ic = document.getElementById(grpId+'-ic');
+  var isOpen = ic && ic.getAttribute('data-open') !== '0';
+  rows.forEach(function(r){ r.style.display = isOpen ? 'none' : ''; });
+  if(ic){ ic.textContent = isOpen ? '▶' : '▼'; ic.setAttribute('data-open', isOpen ? '0' : '1'); }
+});
 
 </script>
 <script>
@@ -1164,11 +1190,11 @@ function clearAllFilters(){Object.keys(FS).forEach(k=>{FS[k].act=[...FS[k].all];
 function buildStateMatrixRows(){
   var bizList=CURRENT_BIZ==='ALL'?BIZ_LIST:[CURRENT_BIZ];
   var TD='padding:7px 12px;font-size:12px;border-bottom:1px solid #F3F4F6;';
-  var TDSUB='padding:8px 12px;font-size:12px;font-weight:800;border-bottom:2px solid #D1FAE5;cursor:pointer;user-select:none;';
+  var TDSUB='padding:8px 12px;font-size:12px;font-weight:800;border-bottom:2px solid #D1FAE5;cursor:pointer;';
   var TGTOT='padding:8px 12px;font-size:12px;font-weight:800;border-bottom:3px solid #6EE7B7;color:#065F46;';
   var html='';
 
-  // ── Grand total row (sticky) ──
+  // Grand total (sticky)
   var gYtdA=0,gMtdA=0,gYtdBV=0,gMtdBV=0;
   for(var gbi=0;gbi<bizList.length;gbi++){
     var grows=getFilteredRows(bizList[gbi]);
@@ -1187,14 +1213,13 @@ function buildStateMatrixRows(){
       gsm[gmst].mtdBV+=parseFloat(gmr['BV'])||0;
       if(gmr['Customer Code'])gsm[gmst].mtdD[gmr['Customer Code']]=1;
     }
-    var bizYtdD={},bizMtdD={};
+    var byd={},bmd={};
     Object.keys(gsm).forEach(function(k){
-      Object.keys(gsm[k].ytdD).forEach(function(c){bizYtdD[c]=1;});
-      Object.keys(gsm[k].mtdD).forEach(function(c){bizMtdD[c]=1;});
+      Object.keys(gsm[k].ytdD).forEach(function(c){byd[c]=1;});
+      Object.keys(gsm[k].mtdD).forEach(function(c){bmd[c]=1;});
       gYtdBV+=gsm[k].ytdBV; gMtdBV+=gsm[k].mtdBV;
     });
-    gYtdA+=Object.keys(bizYtdD).length;
-    gMtdA+=Object.keys(bizMtdD).length;
+    gYtdA+=Object.keys(byd).length; gMtdA+=Object.keys(bmd).length;
   }
   html+='<tr style="background:#D1FAE5;position:sticky;top:0;z-index:2">'
     +'<td style="'+TGTOT+'">&#128202; Grand Total</td>'
@@ -1205,7 +1230,7 @@ function buildStateMatrixRows(){
     +'<td style="'+TGTOT+'text-align:right">'+fmt(gMtdBV)+'</td>'
     +'</tr>';
 
-  // ── Business rows with collapse/expand ──
+  // Business groups
   for(var bi=0;bi<bizList.length;bi++){
     var biz=bizList[bi];
     var cfg=BIZ_CFG[biz];
@@ -1227,23 +1252,23 @@ function buildStateMatrixRows(){
     }
     var entries=Object.keys(sm).map(function(k){return [k,sm[k]];});
     entries.sort(function(a,b){return b[1].ytdBV-a[1].ytdBV;});
-    var bizAllYtdD={},bizAllMtdD={},totYtdBV=0,totMtdBV=0;
+    var byd2={},bmd2={},totYtdBV=0,totMtdBV=0;
     for(var ei=0;ei<entries.length;ei++){
-      Object.keys(entries[ei][1].ytdD).forEach(function(c){bizAllYtdD[c]=1;});
-      Object.keys(entries[ei][1].mtdD).forEach(function(c){bizAllMtdD[c]=1;});
+      Object.keys(entries[ei][1].ytdD).forEach(function(c){byd2[c]=1;});
+      Object.keys(entries[ei][1].mtdD).forEach(function(c){bmd2[c]=1;});
       totYtdBV+=entries[ei][1].ytdBV; totMtdBV+=entries[ei][1].mtdBV;
     }
-    var totYtdA=Object.keys(bizAllYtdD).length;
-    var totMtdA=Object.keys(bizAllMtdD).length;
+    var totYtdA=Object.keys(byd2).length;
+    var totMtdA=Object.keys(bmd2).length;
     var grpId='smgrp-'+biz;
 
-    // Clickable subtotal row = toggle
-    html+='<tr style="background:#ECFDF5;cursor:pointer" data-grp="'+grpId+'" onclick="toggleMatrixGroup(this.getAttribute('data-grp'))">'
+    // Subtotal row — clickable, uses data-grp for JS hook
+    html+='<tr style="background:#ECFDF5;cursor:pointer" data-grp="'+grpId+'">'
       +'<td style="'+TDSUB+'color:'+cfg.acc+'">'
       +'<span style="display:inline-flex;align-items:center;gap:6px">'
       +'<span style="width:8px;height:8px;border-radius:50%;background:'+cfg.acc+';display:inline-block"></span>'
       +biz
-      +'<span id="'+grpId+'-ic" style="font-size:10px;color:'+cfg.acc+';font-weight:500;margin-left:4px">&#9660;</span>'
+      +'<span id="'+grpId+'-ic" style="font-size:10px;margin-left:4px">&#9660;</span>'
       +'</span></td>'
       +'<td style="'+TDSUB+'color:#065F46;font-style:italic">All States</td>'
       +'<td style="'+TDSUB+'text-align:right;color:'+cfg.acc+'">'+fmtInt(totYtdA)+'</td>'
@@ -1252,7 +1277,7 @@ function buildStateMatrixRows(){
       +'<td style="'+TDSUB+'text-align:right;color:#065F46">'+fmt(totMtdBV)+'</td>'
       +'</tr>';
 
-    // State detail rows — wrapped with class for toggling
+    // State rows
     for(var si=0;si<entries.length;si++){
       var est=entries[si][0]; var ev=entries[si][1];
       html+='<tr class="'+grpId+'">'
@@ -1267,14 +1292,6 @@ function buildStateMatrixRows(){
     if(bizList.length>1) html+='<tr><td colspan="6" style="padding:3px;background:#F0F2F7"></td></tr>';
   }
   return html;
-}
-
-function toggleMatrixGroup(grpId){
-  var rows=document.querySelectorAll('tr.'+grpId);
-  var ic=document.getElementById(grpId+'-ic');
-  var isOpen=ic&&ic.getAttribute('data-open')!=='0';
-  rows.forEach(function(r){r.style.display=isOpen?'none':'';});
-  if(ic){ic.textContent=isOpen?'▶':'▼';ic.setAttribute('data-open',isOpen?'0':'1');}
 }
 
 
@@ -1301,6 +1318,19 @@ function sumFocus(biz){
     });
   },150);
 }
+
+
+// Matrix group collapse via event delegation
+document.addEventListener('click', function(e){
+  var tr = e.target.closest('tr[data-grp]');
+  if(!tr) return;
+  var grpId = tr.getAttribute('data-grp');
+  var rows = document.querySelectorAll('tr.'+grpId);
+  var ic = document.getElementById(grpId+'-ic');
+  var isOpen = ic && ic.getAttribute('data-open') !== '0';
+  rows.forEach(function(r){ r.style.display = isOpen ? 'none' : ''; });
+  if(ic){ ic.textContent = isOpen ? '▶' : '▼'; ic.setAttribute('data-open', isOpen ? '0' : '1'); }
+});
 
 </script>
 </body>
